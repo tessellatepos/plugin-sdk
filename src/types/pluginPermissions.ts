@@ -5,3 +5,11 @@ export enum PluginPermission {
     DEVICE = "DEVICE",
     ORDER = "ORDER",
 }
+
+export interface PluginPermissionProvider {
+    cart: boolean;
+    catalog: boolean;
+    checkout: boolean;
+    device: boolean;
+    order: boolean;
+}

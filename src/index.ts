@@ -33,6 +33,7 @@ export type {
 } from "@/types/pluginManifest.ts";
 
 export { PluginPermission } from "@/types/pluginPermissions.ts";
+export type { PluginPermissionProvider } from "@/types/pluginPermissions.ts";
 
 export type { PluginUIMountDefinition } from "@/types/pluginUIMounts.ts";
 export { PluginUIMountPoint } from "@/types/pluginUIMounts.ts";
