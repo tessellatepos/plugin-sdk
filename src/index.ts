@@ -25,7 +25,12 @@ export type {
 } from "@/types/pluginDatabaseMounts.ts";
 export { PluginColumnType } from "@/types/pluginDatabaseMounts.ts";
 
-export type { PluginManifest } from "@/types/pluginManifest.ts";
+export type {
+    PluginManifest,
+    PluginManifestAuthor,
+    PluginManifestBugs,
+    PluginManifestFunding,
+} from "@/types/pluginManifest.ts";
 
 export { PluginPermission } from "@/types/pluginPermissions.ts";
 
