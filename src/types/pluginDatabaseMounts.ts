@@ -12,6 +12,8 @@ export interface PluginDatabaseColumn {
     type: PluginColumnType;
     length?: number;
     nullable?: boolean;
+    unique?: boolean;
+    auto_increment?: boolean;
     default?: string | number | boolean | null;
     primaryKey?: boolean;
 }
@@ -22,7 +24,6 @@ export interface PluginDatabaseTable {
 }
 
 export interface PluginDatabaseMount {
-    database_name: string;
     tables: PluginDatabaseTable[];
 }
 
