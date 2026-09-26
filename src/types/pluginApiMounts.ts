@@ -20,7 +20,6 @@ export interface PluginApiRequest {
     params: Record<string, string>;
     query: Record<string, string>;
     body: unknown;
-    session: { deviceId: string; locationId: string };
 }
 
 export interface PluginApiResponse {
