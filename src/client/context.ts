@@ -11,7 +11,7 @@ export interface CartApi {
 }
 
 export interface OrderApi {
-    discounts: Discount[];
+    readonly discounts: readonly Discount[];
     completedOrder: Order | null;
 }
 
