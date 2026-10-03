@@ -1,0 +1,32 @@
+name: Build and Publish Plugin SDK to GitHub Packages
+
+on:
+    release:
+        types: [created]
+    workflow_dispatch:
+
+jobs:
+    publish-gpr:
+        runs-on: ubuntu-latest
+        permissions:
+            contents: read
+            packages: write
+        env:
+            HUSKY: 0
+        steps:
+            - uses: actions/checkout@v7
+            - uses: pnpm/setup@v2
+              with:
+                  version: 11.24.0
+                  runtime: node@25.9
+                  require-lockfile: true
+                  install: false
+                  cache: true
+            - run: pnpm install --frozen-lockfile
+            - run: pnpm run build
+            - run: |
+                  echo "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}" > .npmrc
+                  echo "@tessellatepos:registry=https://npm.pkg.github.com/" >> .npmrc
+            - run: pnpm publish --no-git-checks
+              env:
+                  NODE_AUTH_TOKEN: ${{secrets.GITHUB_TOKEN}}
