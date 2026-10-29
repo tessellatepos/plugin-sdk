@@ -4,13 +4,12 @@ Contract surface for Tessellate POS plugins: types, mount points, hooks and
 events, plus the build tooling plugins use and the helper the host uses to
 load them.
 
-| Entry | Used by | Contents |
-|---|---|---|
-| `@tessellatepos/plugin-sdk` | Plugin client code | `PluginContext`, `PluginUIMountPoint`, `PluginApiMethod`, `FrontendPlugin`, database column types |
-| `@tessellatepos/plugin-sdk/server` | Plugin server entry | `ServerPlugin`, `PluginServerContext`, `hooks`, `events` |
-| `@tessellatepos/plugin-sdk/vite` | Plugin `vite.config.ts` | `tessellatePlugin()` |
-| `@tessellatepos/plugin-sdk/host` | Tessellate frontend | `exposeSharedModules()` |
-
+| Entry                              | Used by                 | Contents                                                                                          |
+| ---------------------------------- | ----------------------- | ------------------------------------------------------------------------------------------------- |
+| `@tessellatepos/plugin-sdk`        | Plugin client code      | `PluginContext`, `PluginUIMountPoint`, `PluginApiMethod`, `FrontendPlugin`, database column types |
+| `@tessellatepos/plugin-sdk/server` | Plugin server entry     | `ServerPlugin`, `PluginServerContext`, `hooks`, `events`, `defineAuthProvider`                    |
+| `@tessellatepos/plugin-sdk/vite`   | Plugin `vite.config.ts` | `tessellatePlugin()`                                                                              |
+| `@tessellatepos/plugin-sdk/host`   | Tessellate frontend     | `exposeSharedModules()`                                                                           |
 
 ## Building a plugin
 
@@ -35,6 +34,43 @@ An entry whose file doesn't exist is skipped. Change the paths, or turn one
 off, with `tessellatePlugin({ client: "src/ui.tsx", server: false })`.
 `vite build --watch` rebuilds both. `vite` is an optional peer dependency;
 install it in the plugin.
+
+## Auth providers
+
+A plugin can add a sign-in method, not its own session system. Declare the
+`AUTH` permission, list the roles it may grant in `tessellate.authRoles`, and
+register an `AuthProvider` from the server entry:
+
+```ts
+import { defineAuthProvider } from "@tessellatepos/plugin-sdk/server";
+
+plugin.register(
+    "auth",
+    defineAuthProvider({
+        id: "acme-sso",
+        label: "Sign in with Acme",
+        oidc: { discoveryUrl, clientId, clientSecret },
+        resolveAccess: (profile) =>
+            profile.email_verified
+                ? { roles: ["cashier"] }
+                : { deny: "Email not verified" },
+    }),
+);
+```
+
+A provider can use one of `oidc`, `oauth` or `social` (the host wires them
+into its auth system), or `betterAuthPlugin` for methods the host does not
+ship, such as a PIN. The latter runs arbitrary code in the host. Methods that
+need their own login UI mount a component at `PluginUIMountPoint.AUTH_METHOD`.
+
+The host guarantees that:
+
+- Without the `AUTH` permission the plugin fails to load.
+- Only roles in `authRoles`, further capped by the owner's settings, are
+  granted. A plugin can never grant `owner`.
+- `resolveAccess` returning `deny`, or throwing, blocks the login.
+- Handlers receive the caller as `ctx.principal`. It is `null` only when the
+  host has no resolved caller; treat that as unauthenticated.
 
 ## Hosting plugins
 
