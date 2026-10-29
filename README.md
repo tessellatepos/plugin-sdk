@@ -11,6 +11,32 @@ load them.
 | `@tessellatepos/plugin-sdk/vite`   | Plugin `vite.config.ts` | `tessellatePlugin()`                                                                              |
 | `@tessellatepos/plugin-sdk/host`   | Tessellate frontend     | `exposeSharedModules()`                                                                           |
 
+## Customers
+
+Customers are PII, so access is gated by the `CUSTOMER` permission
+(`PluginPermission.CUSTOMER`).
+
+| Surface | Name | Notes |
+|---|---|---|
+| Hook | `hooks.beforeCustomerSave` | Input `{ customer, existingId? }`; return the (possibly modified) `CustomerInput` or block. `existingId` is set for updates |
+| Event | `events.customerCreated` | `(customer)` |
+| Event | `events.customerUpdated` | `(customer, previous)` |
+| Event | `events.customerDeleted` | `(customerId)` only |
+| Server context | `ctx.getCustomer(id)` | `Customer \| null` |
+| Server context | `ctx.findCustomers(query)` | `CustomerPage` |
+| UI mount | `PluginUIMountPoint.CUSTOMER_PANEL` | Panel beside the customer on the cart |
+| Client context | `context.customer` | The customer attached to the current cart, if any |
+
+The host rejects `getCustomer` and `findCustomers` calls from plugins without
+the `CUSTOMER` permission.
+
+```ts
+hooks.beforeCustomerSave // handler returns { ok: true, value } or { ok: false, reason }
+```
+
+Don't log or persist customer fields beyond what the plugin needs; store the
+customer id and look the rest up when required.
+
 ## Building a plugin
 
 ```ts
