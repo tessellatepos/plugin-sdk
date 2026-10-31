@@ -42,9 +42,21 @@ export interface InvoiceCreateRequest {
 
 export const hooks = {
     beforeOrderCreate: defineHook<Order>("beforeOrderCreate"),
-    beforeCheckout: defineHook<{ orderId: string; amount: Money }, void>(
-        "beforeCheckout",
-    ),
+    /**
+     * Runs before a checkout starts. For an online checkout started through
+     * the gateway, `processor`, `source` (the credential's name) and
+     * `principal` (the credential) are set too.
+     */
+    beforeCheckout: defineHook<
+        {
+            orderId: string;
+            amount: Money;
+            processor?: string;
+            source?: string;
+            principal?: Pick<Principal, "kind" | "id" | "display_name">;
+        },
+        void
+    >("beforeCheckout"),
     beforePayment: defineHook<{ orderId: string; method: TenderType }, void>(
         "beforePayment",
     ),
