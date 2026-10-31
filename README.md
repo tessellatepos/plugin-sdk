@@ -4,12 +4,48 @@ Contract surface for Tessellate POS plugins: types, mount points, hooks and
 events, plus the build tooling plugins use and the helper the host uses to
 load them.
 
-| Entry                              | Used by                 | Contents                                                                                          |
-| ---------------------------------- | ----------------------- | ------------------------------------------------------------------------------------------------- |
-| `@tessellatepos/plugin-sdk`        | Plugin client code      | `PluginContext`, `PluginUIMountPoint`, `PluginApiMethod`, `FrontendPlugin`, database column types |
-| `@tessellatepos/plugin-sdk/server` | Plugin server entry     | `ServerPlugin`, `PluginServerContext`, `hooks`, `events`, `defineAuthProvider`                    |
-| `@tessellatepos/plugin-sdk/vite`   | Plugin `vite.config.ts` | `tessellatePlugin()`                                                                              |
-| `@tessellatepos/plugin-sdk/host`   | Tessellate frontend     | `exposeSharedModules()`                                                                           |
+| Entry                               | Used by                                     | Contents                                                                                           |
+| ----------------------------------- | ------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| `@tessellatepos/plugin-sdk`         | Plugin client code                          | `PluginContext`, `PluginUIMountPoint`, `PluginApiMethod`, `FrontendPlugin`, database column types  |
+| `@tessellatepos/plugin-sdk/server`  | Plugin server entry                         | `ServerPlugin`, `PluginServerContext`, `hooks`, `events`, `defineAuthProvider`, `PaymentProcessor` |
+| `@tessellatepos/plugin-sdk/vite`    | Plugin `vite.config.ts`                     | `tessellatePlugin()`                                                                               |
+| `@tessellatepos/plugin-sdk/host`    | Tessellate frontend                         | `exposeSharedModules()`                                                                            |
+| `@tessellatepos/plugin-sdk/gateway` | Stores and integrations calling the gateway | `createGatewayClient`, `verifyWebhook`, `GatewayError`, the `tessellate-gateway` codegen CLI       |
+
+## Permissions, mounts and extension points
+
+Permissions are declared in the manifest (`tessellate.permissions`). A plugin
+that uses a surface without its permission fails to load or is refused the
+call.
+
+| Permission                                       | Unlocks                                                                                                        |
+| ------------------------------------------------ | -------------------------------------------------------------------------------------------------------------- |
+| `AUTH`                                           | `plugin.register("auth", provider)`: sign-in methods. Roles it may grant are listed in `tessellate.authRoles`  |
+| `CUSTOMER`                                       | `ctx.getCustomer`, `ctx.findCustomers`, the customer hook and events, and `beforeInvoiceCreate` (all hold PII) |
+| `PAYMENT`                                        | `plugin.register("paymentProcessor", processor)`                                                               |
+| `CART`, `CATALOG`, `CHECKOUT`, `DEVICE`, `ORDER` | The existing cart, catalog, checkout, device and order surfaces                                                |
+
+UI mount points (`PluginUIMountPoint`):
+
+| Mount                                                                      | Where it renders                                                     |
+| -------------------------------------------------------------------------- | -------------------------------------------------------------------- |
+| `PAGE`, `CART_SIDEBAR`, `CHECKOUT_FOOTER`, `SETTINGS_TAB`, `RECEIPT_EXTRA` | The existing places                                                  |
+| `AUTH_METHOD`                                                              | Login screen, for a sign-in method that needs its own UI (a PIN pad) |
+| `CUSTOMER_PANEL`                                                           | Panel beside the customer attached to the cart                       |
+| `DASHBOARD_WIDGET`                                                         | A card on the dashboard, for users who can read it                   |
+
+Hooks run before an action and may change its input or block it; events run
+after and are fire-and-forget. Both receive a context as their last argument
+(see [Gateway](#gateway-principal-source-scopes-and-operations)).
+
+| Kind   | Names                                                                                                                                                                                                                                  |
+| ------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Hooks  | `beforeOrderCreate`, `beforeCheckout`, `beforePayment`, `beforeCustomerSave`, `beforeInvoiceCreate`                                                                                                                                    |
+| Events | `orderCreated`, `paymentCompleted`, `orderCancelled`, `invoiceCreated`, `invoiceSent`, `invoiceViewed`, `invoicePaid`, `invoiceOverdue`, `invoiceCanceled`, `invoiceRefunded`, `customerCreated`, `customerUpdated`, `customerDeleted` |
+
+Server context (`ctx` in API handlers): `ctx.principal` (the caller, `null`
+only when unresolved: treat as unauthenticated), `ctx.db`, `ctx.session`,
+`ctx.getOrder`, `ctx.lookupItem`, and the `CUSTOMER`-gated customer lookups.
 
 ## Customers
 
@@ -148,7 +184,7 @@ The host guarantees that:
 - Card data never passes through the host. A processor sends the shopper to a
   hosted page or invoice and reports the result by webhook.
 
-## Gateway traffic: principal, source and scopes
+## Gateway: principal, source, scopes and operations
 
 Orders created through a gateway credential reach the same hooks and events as
 staff orders. Every hook handler gets `(input, ctx)` and every event listener
@@ -173,10 +209,65 @@ Plugin API handlers receive the caller as `ctx.principal`: a staff user, or a
 gateway credential when the route is exposed through the gateway. A handler
 that throws gets a generic 500; its message is never returned.
 
-A plugin that exposes gateway routes lists the scopes they use in
-`tessellate.gatewayScopes`, each `plugin:<plugin name>:<verb>`. A route may use
-only scopes listed there, and a plugin can never declare or use a core scope.
-Owners grant these scopes to credentials like any other.
+### Exposing a route through the gateway
+
+A plugin API route stays internal unless its mount carries a `gateway`
+descriptor. The descriptor names the operation, the scope, where the location
+travels, and zod schemas for the request and response (wire form: amounts and
+quantities are strings). `zod` is an **optional peer dependency** of the SDK;
+install it in the plugin only if it declares gateway operations.
+
+```ts
+plugin.register("api", {
+    route: "/customers/:customerId/summary",
+    method: PluginApiMethod.GET,
+    gateway: {
+        operationId: "loyalty-sidebar.customerSummary",
+        scope: "plugin:loyalty-sidebar:read",
+        summary: "Loyalty points earned by one customer",
+        location: "none", // "path" | "query" | "body" | "none"
+        response: z.object({ orders: z.number(), points: z.number() }),
+    },
+    handler: async (req, ctx) => ({
+        body: await summaryFor(req.params.customerId, ctx),
+    }),
+});
+```
+
+The route is then served at
+`/gateway/v1/plugins/<plugin name>/<route>`, appears in the credential's
+OpenAPI document and generated client, and gets the gateway's location and
+rate-limit enforcement.
+
+Manifest and naming rules, enforced when the plugin loads:
+
+- List every scope the plugin uses in `tessellate.gatewayScopes`, each written
+  `plugin:<plugin name>:<verb>` (verb: lowercase letters, digits, dashes). A
+  plugin cannot declare or use a core scope, `*`, or another plugin's scope.
+- An operation may use only scopes listed there, and its `operationId` must
+  start with `<plugin name>.`.
+- Owners grant these scopes to credentials like any other.
+
+```json
+{
+    "tessellate": {
+        "permissions": ["CUSTOMER"],
+        "gatewayScopes": ["plugin:loyalty-sidebar:read"]
+    }
+}
+```
+
+### Calling the gateway (`@tessellatepos/plugin-sdk/gateway`)
+
+For stores and integrations, not plugins. The subpath imports no React or Vite.
+
+| Export                                                          | Purpose                                                                                                                   |
+| --------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| `createGatewayClient({ baseUrl, clientId, clientSecret? })`     | Sends the credential as HTTP Basic; throws `GatewayError` on non-2xx                                                      |
+| `verifyWebhook(rawBody, header, secret, options?)`              | Verifies `Tessellate-Signature` against the raw body and returns the event; throws `WebhookVerificationError`             |
+| `tessellate-gateway generate --url … --client-id … [--out dir]` | Writes a typed client from the credential's OpenAPI document (secret via `--client-secret` or `TESSELLATE_CLIENT_SECRET`) |
+
+See the Gateway page of the Tessellate docs for credentials, scopes and webhooks.
 
 ## Hosting plugins
 
