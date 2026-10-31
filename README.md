@@ -25,6 +25,7 @@ Customers are PII, so access is gated by the `CUSTOMER` permission
 | Server context | `ctx.getCustomer(id)` | `Customer \| null` |
 | Server context | `ctx.findCustomers(query)` | `CustomerPage` |
 | UI mount | `PluginUIMountPoint.CUSTOMER_PANEL` | Panel beside the customer on the cart |
+| UI mount | `PluginUIMountPoint.DASHBOARD_WIDGET` | Card on the dashboard for users who can read it |
 | Client context | `context.customer` | The customer attached to the current cart, if any |
 
 The host rejects `getCustomer` and `findCustomers` calls from plugins without

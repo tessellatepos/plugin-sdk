@@ -16,4 +16,6 @@ export enum PluginUIMountPoint {
     AUTH_METHOD = "auth-method",
     /** Panel beside the customer attached to the cart (loyalty, notes). */
     CUSTOMER_PANEL = "customer-panel",
+    /** A card on the dashboard, shown to users who can read it. */
+    DASHBOARD_WIDGET = "dashboard-widget",
 }
