@@ -13,7 +13,15 @@ export type {
 export { defineHook, defineEvent, hooks, events } from "@/server/host/hooks.ts";
 
 export type {
+    HookContext,
+    EventContext,
+    InvoiceCreateRequest,
     HookDefinition,
     HookResult,
     EventDefinition,
 } from "@/server/host/hooks.ts";
+
+export type {
+    PaymentProcessor,
+    RawWebhookRequest,
+} from "@/server/host/processor.ts";

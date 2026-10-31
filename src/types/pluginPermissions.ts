@@ -8,6 +8,8 @@ export enum PluginPermission {
     CUSTOMER = "CUSTOMER",
     DEVICE = "DEVICE",
     ORDER = "ORDER",
+    /** Contribute a payment processor via `plugin.register("paymentProcessor", ...)`. */
+    PAYMENT = "PAYMENT",
 }
 
 export interface PluginPermissionProvider {
@@ -18,4 +20,5 @@ export interface PluginPermissionProvider {
     customer: boolean;
     device: boolean;
     order: boolean;
+    payment: boolean;
 }

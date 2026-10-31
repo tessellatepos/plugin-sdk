@@ -45,5 +45,12 @@ export interface PluginManifest {
          * further by what the owner allows, and `owner` is never grantable.
          */
         authRoles?: string[];
+        /**
+         * Scopes this plugin's gateway operations use, each written
+         * `plugin:<plugin name>:<verb>` (verb: lowercase letters, digits and
+         * dashes). An operation may use only scopes listed here, and the
+         * owner can grant only these to credentials.
+         */
+        gatewayScopes?: string[];
     };
 }
