@@ -10,6 +10,8 @@ jobs:
         runs-on: ubuntu-latest
         env:
             HUSKY: 0
+            # The install above already ran; skip pnpm's repeat check, which would re-apply the age policy.
+            pnpm_config_verify_deps_before_run: false
         steps:
             - uses: actions/checkout@v7
             - uses: pnpm/setup@v2
