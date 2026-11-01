@@ -46,8 +46,9 @@ jobs:
             # Trusted publishing needs npm 11.5.1 or newer.
             - run: npm install -g npm@latest
             # No token: npm exchanges the workflow's OIDC identity for a
-            # short-lived publish credential (configured on npmjs.com).
-            - run: npm publish ./*.tgz --registry https://registry.npmjs.org/ --access public
+            # short-lived credential (configured on npmjs.com). The trusted publisher
+            # can only stage; approve the staged version afterwards with 2FA.
+            - run: npm stage publish ./*.tgz --registry https://registry.npmjs.org/ --access public
 
     publish-gpr:
         needs: build
