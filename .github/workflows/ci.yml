@@ -1,0 +1,25 @@
+name: CI
+
+on:
+    pull_request:
+    push:
+        branches: [main]
+
+jobs:
+    check:
+        runs-on: ubuntu-latest
+        env:
+            HUSKY: 0
+        steps:
+            - uses: actions/checkout@v7
+            - uses: pnpm/setup@v2
+              with:
+                  version: 11.24.0
+                  runtime: node@25.9
+                  require-lockfile: true
+                  install: false
+                  cache: true
+            - run: pnpm install --frozen-lockfile --ignore-scripts
+            - run: pnpm lint
+            - run: pnpm typecheck
+            - run: pnpm run build

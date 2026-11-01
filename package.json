@@ -1,6 +1,6 @@
 {
     "name": "@tessellatepos/plugin-sdk",
-    "version": "0.0.2-alpha",
+    "version": "0.0.2-alpha2",
     "description": "Curated contract surface for Tessellate POS plugins (client + server).",
     "author": "Tessellate POS <tessellate@travisfriesen.ca>",
     "license": "Apache-2.0",
@@ -32,6 +32,13 @@
     "files": [
         "lib"
     ],
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/tessellatepos/plugin-sdk.git"
+    },
+    "publishConfig": {
+        "access": "public"
+    },
     "scripts": {
         "build": "tsup",
         "typecheck": "tsc --noEmit",
@@ -39,7 +46,7 @@
         "lint:fix": "prettier . --write && eslint . --fix"
     },
     "dependencies": {
-        "@tessellatepos/sdk": "workspace:*",
+        "@tessellatepos/sdk": "0.0.2-alpha",
         "openapi-typescript": "7.13.0"
     },
     "peerDependencies": {

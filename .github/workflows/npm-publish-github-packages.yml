@@ -1,4 +1,4 @@
-name: Build and Publish Plugin SDK to GitHub Packages
+name: Publish Plugin SDK
 
 on:
     release:
@@ -6,11 +6,8 @@ on:
     workflow_dispatch:
 
 jobs:
-    publish-gpr:
+    build:
         runs-on: ubuntu-latest
-        permissions:
-            contents: read
-            packages: write
         env:
             HUSKY: 0
         steps:
@@ -22,11 +19,44 @@ jobs:
                   require-lockfile: true
                   install: false
                   cache: true
-            - run: pnpm install --frozen-lockfile
+            - run: pnpm install --frozen-lockfile --ignore-scripts
+            - run: pnpm lint
+            - run: pnpm typecheck
             - run: pnpm run build
-            - run: |
-                  echo "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}" > .npmrc
-                  echo "@tessellatepos:registry=https://npm.pkg.github.com/" >> .npmrc
-            - run: pnpm publish --no-git-checks
+            - run: pnpm pack --pack-destination dist-pack
+            - uses: actions/upload-artifact@v4
+              with:
+                  name: package
+                  path: dist-pack/*.tgz
+
+    # Same tarball goes to both registries, so they can never drift apart.
+    publish:
+        needs: build
+        runs-on: ubuntu-latest
+        permissions:
+            contents: read
+            packages: write
+            id-token: write
+        strategy:
+            fail-fast: false
+            matrix:
+                include:
+                    - registry: https://registry.npmjs.org/
+                      host: registry.npmjs.org
+                      token: NPM_TOKEN
+                    - registry: https://npm.pkg.github.com/
+                      host: npm.pkg.github.com
+                      token: GITHUB_TOKEN
+        steps:
+            - uses: actions/download-artifact@v4
+              with:
+                  name: package
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: 24
+            - name: Publish to ${{ matrix.host }}
               env:
-                  NODE_AUTH_TOKEN: ${{secrets.GITHUB_TOKEN}}
+                  NODE_AUTH_TOKEN: ${{ matrix.token == 'NPM_TOKEN' && secrets.NPM_TOKEN || secrets.GITHUB_TOKEN }}
+              run: |
+                  echo "//${{ matrix.host }}/:_authToken=${NODE_AUTH_TOKEN}" > ~/.npmrc
+                  npm publish ./*.tgz --registry ${{ matrix.registry }} --access public ${{ matrix.host == 'registry.npmjs.org' && '--provenance' || '' }}
