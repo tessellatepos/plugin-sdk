@@ -4,6 +4,11 @@ import type { PluginContext } from "@/client/context.ts";
 export interface PluginUIMountDefinition {
     mount: PluginUIMountPoint;
     component: React.ComponentType<{ context: PluginContext }>;
+    /**
+     * Name shown for mounts the host lists in navigation (SETTINGS_TAB).
+     * Falls back to the plugin name.
+     */
+    label?: string;
 }
 
 export enum PluginUIMountPoint {
