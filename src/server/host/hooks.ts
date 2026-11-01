@@ -1,4 +1,10 @@
-import type { Order, Money, TenderType } from "@tessellatepos/sdk";
+import type {
+    Order,
+    Money,
+    TenderType,
+    Customer,
+    CustomerInput,
+} from "@tessellatepos/sdk";
 
 export const hooks = {
     beforeOrderCreate: defineHook<Order>("beforeOrderCreate"),
@@ -8,6 +14,15 @@ export const hooks = {
     beforePayment: defineHook<{ orderId: string; method: TenderType }, void>(
         "beforePayment",
     ),
+    /**
+     * Runs before a customer is created or updated. A plugin may return a
+     * modified `CustomerInput` or block the save. `existingId` is set for
+     * updates. Requires the CUSTOMER permission.
+     */
+    beforeCustomerSave: defineHook<
+        { customer: CustomerInput; existingId?: string },
+        CustomerInput
+    >("beforeCustomerSave"),
 };
 
 export const events = {
@@ -17,6 +32,14 @@ export const events = {
             "paymentCompleted",
         ),
     orderCancelled: defineEvent<(order: Order) => void>("orderCancelled"),
+    customerCreated:
+        defineEvent<(customer: Customer) => void>("customerCreated"),
+    customerUpdated:
+        defineEvent<(customer: Customer, previous: Customer) => void>(
+            "customerUpdated",
+        ),
+    customerDeleted:
+        defineEvent<(customerId: string) => void>("customerDeleted"),
 };
 
 export type HookResult<T> =

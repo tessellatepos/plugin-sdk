@@ -14,4 +14,8 @@ export enum PluginUIMountPoint {
     RECEIPT_EXTRA = "receipt-extra",
     /** Login screen UI for sign-in methods needing their own UI (PIN pad). */
     AUTH_METHOD = "auth-method",
+    /** Panel beside the customer attached to the cart (loyalty, notes). */
+    CUSTOMER_PANEL = "customer-panel",
+    /** A card on the dashboard, shown to users who can read it. */
+    DASHBOARD_WIDGET = "dashboard-widget",
 }

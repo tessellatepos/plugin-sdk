@@ -4,6 +4,8 @@ export enum PluginPermission {
     CART = "CART",
     CATALOG = "CATALOG",
     CHECKOUT = "CHECKOUT",
+    /** Read customers and receive customer hooks/events (contains PII). */
+    CUSTOMER = "CUSTOMER",
     DEVICE = "DEVICE",
     ORDER = "ORDER",
 }
@@ -13,6 +15,7 @@ export interface PluginPermissionProvider {
     cart: boolean;
     catalog: boolean;
     checkout: boolean;
+    customer: boolean;
     device: boolean;
     order: boolean;
 }

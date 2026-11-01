@@ -1,4 +1,4 @@
-import type { CartItem, Discount, Order } from "@tessellatepos/sdk";
+import type { CartItem, Customer, Discount, Order } from "@tessellatepos/sdk";
 import type { PluginApiMethod } from "@/types/pluginApiMounts.ts";
 
 export interface CartApi {
@@ -35,4 +35,6 @@ export interface PluginContext {
     settings: SettingsApi;
     navigate: (path: string) => void;
     api: PluginApiClient;
+    /** The customer attached to the current cart, if any. */
+    customer?: Customer | null;
 }
