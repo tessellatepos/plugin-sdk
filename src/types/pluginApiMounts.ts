@@ -1,8 +1,14 @@
 import type { PluginServerContext } from "@/server/host/context.ts";
+import type { PluginGatewayOperation } from "@/types/gateway.ts";
 
 export interface PluginApiMountDefinition {
     route: string;
     method: PluginApiMethod;
+    /**
+     * Exposes this route through the API gateway. Omit it and the route stays
+     * internal to the host.
+     */
+    gateway?: PluginGatewayOperation;
     handler: (
         req: PluginApiRequest,
         ctx: PluginServerContext,

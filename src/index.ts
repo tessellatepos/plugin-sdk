@@ -17,6 +17,13 @@ export type {
 export { PluginApiMethod } from "@/types/pluginApiMounts.ts";
 
 export type {
+    GatewayLocation,
+    GatewayMethod,
+    GatewayOperation,
+    PluginGatewayOperation,
+} from "@/types/gateway.ts";
+
+export type {
     PluginDatabaseColumn,
     PluginDatabaseMount,
     PluginDatabaseRepository,
