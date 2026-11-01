@@ -30,23 +30,12 @@ jobs:
                   path: dist-pack/*.tgz
 
     # Same tarball goes to both registries, so they can never drift apart.
-    publish:
+    publish-npm:
         needs: build
         runs-on: ubuntu-latest
         permissions:
             contents: read
-            packages: write
             id-token: write
-        strategy:
-            fail-fast: false
-            matrix:
-                include:
-                    - registry: https://registry.npmjs.org/
-                      host: registry.npmjs.org
-                      token: NPM_TOKEN
-                    - registry: https://npm.pkg.github.com/
-                      host: npm.pkg.github.com
-                      token: GITHUB_TOKEN
         steps:
             - uses: actions/download-artifact@v4
               with:
@@ -54,9 +43,27 @@ jobs:
             - uses: actions/setup-node@v4
               with:
                   node-version: 24
-            - name: Publish to ${{ matrix.host }}
-              env:
-                  NODE_AUTH_TOKEN: ${{ matrix.token == 'NPM_TOKEN' && secrets.NPM_TOKEN || secrets.GITHUB_TOKEN }}
+            # Trusted publishing needs npm 11.5.1 or newer.
+            - run: npm install -g npm@latest
+            # No token: npm exchanges the workflow's OIDC identity for a
+            # short-lived publish credential (configured on npmjs.com).
+            - run: npm publish ./*.tgz --registry https://registry.npmjs.org/ --access public
+
+    publish-gpr:
+        needs: build
+        runs-on: ubuntu-latest
+        permissions:
+            contents: read
+            packages: write
+        steps:
+            - uses: actions/download-artifact@v4
+              with:
+                  name: package
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: 24
+            - env:
+                  NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
               run: |
-                  echo "//${{ matrix.host }}/:_authToken=${NODE_AUTH_TOKEN}" > ~/.npmrc
-                  npm publish ./*.tgz --registry ${{ matrix.registry }} --access public ${{ matrix.host == 'registry.npmjs.org' && '--provenance' || '' }}
+                  echo "//npm.pkg.github.com/:_authToken=${NODE_AUTH_TOKEN}" > ~/.npmrc
+                  npm publish ./*.tgz --registry https://npm.pkg.github.com/ --access public
