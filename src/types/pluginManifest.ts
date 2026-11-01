@@ -40,5 +40,10 @@ export interface PluginManifest {
     };
     tessellate: {
         permissions: PluginPermission[];
+        /**
+         * Roles this plugin's auth provider may grant. The host caps this
+         * further by what the owner allows, and `owner` is never grantable.
+         */
+        authRoles?: string[];
     };
 }

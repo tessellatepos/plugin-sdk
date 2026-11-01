@@ -12,4 +12,6 @@ export enum PluginUIMountPoint {
     CHECKOUT_FOOTER = "checkout-footer",
     SETTINGS_TAB = "settings-tab",
     RECEIPT_EXTRA = "receipt-extra",
+    /** Login screen UI for sign-in methods needing their own UI (PIN pad). */
+    AUTH_METHOD = "auth-method",
 }

@@ -32,6 +32,14 @@ export type {
     PluginManifestFunding,
 } from "@/types/pluginManifest.ts";
 
+export type {
+    AccessDecision,
+    AuthProvider,
+    AuthRequest,
+    BetterAuthPluginLike,
+    ExternalProfile,
+} from "@/server/host/auth.ts";
+
 export { PluginPermission } from "@/types/pluginPermissions.ts";
 export type { PluginPermissionProvider } from "@/types/pluginPermissions.ts";
 

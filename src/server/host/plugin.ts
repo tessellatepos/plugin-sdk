@@ -1,4 +1,5 @@
 import type { PluginApiMountDefinition } from "@/types/pluginApiMounts.ts";
+import type { AuthProvider } from "@/server/host/auth.ts";
 import type { PluginDatabaseMount } from "@/types/pluginDatabaseMounts.ts";
 import type { PluginManifest } from "@/types/pluginManifest.ts";
 import type {
@@ -18,6 +19,8 @@ export interface ServerPlugin {
     register(kind: "api", mount: PluginApiMountDefinition): void;
     /** Declares tables, provisioned at startup as "<plugin name>-<table>". */
     register(kind: "database", mount: PluginDatabaseMount): void;
+    /** Adds a sign-in method. Needs the AUTH permission. */
+    register(kind: "auth", provider: AuthProvider): void;
 
     /** Runs before an action; can modify the input or block the action. */
     hook<TInput, TOutput>(
