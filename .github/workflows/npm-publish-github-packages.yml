@@ -48,7 +48,7 @@ jobs:
             # No token: npm exchanges the workflow's OIDC identity for a
             # short-lived credential (configured on npmjs.com). The trusted publisher
             # can only stage; approve the staged version afterwards with 2FA.
-            - run: npm stage publish ./*.tgz --registry https://registry.npmjs.org/ --access public
+            - run: npm stage publish ./*.tgz --registry https://registry.npmjs.org/ --access public --tag latest
 
     publish-gpr:
         needs: build
@@ -67,4 +67,4 @@ jobs:
                   NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
               run: |
                   echo "//npm.pkg.github.com/:_authToken=${NODE_AUTH_TOKEN}" > ~/.npmrc
-                  npm publish ./*.tgz --registry https://npm.pkg.github.com/ --access public
+                  npm publish ./*.tgz --registry https://npm.pkg.github.com/ --access public --tag latest
