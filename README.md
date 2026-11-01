@@ -16,23 +16,23 @@ load them.
 Customers are PII, so access is gated by the `CUSTOMER` permission
 (`PluginPermission.CUSTOMER`).
 
-| Surface | Name | Notes |
-|---|---|---|
-| Hook | `hooks.beforeCustomerSave` | Input `{ customer, existingId? }`; return the (possibly modified) `CustomerInput` or block. `existingId` is set for updates |
-| Event | `events.customerCreated` | `(customer)` |
-| Event | `events.customerUpdated` | `(customer, previous)` |
-| Event | `events.customerDeleted` | `(customerId)` only |
-| Server context | `ctx.getCustomer(id)` | `Customer \| null` |
-| Server context | `ctx.findCustomers(query)` | `CustomerPage` |
-| UI mount | `PluginUIMountPoint.CUSTOMER_PANEL` | Panel beside the customer on the cart |
-| UI mount | `PluginUIMountPoint.DASHBOARD_WIDGET` | Card on the dashboard for users who can read it |
-| Client context | `context.customer` | The customer attached to the current cart, if any |
+| Surface        | Name                                  | Notes                                                                                                                       |
+| -------------- | ------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| Hook           | `hooks.beforeCustomerSave`            | Input `{ customer, existingId? }`; return the (possibly modified) `CustomerInput` or block. `existingId` is set for updates |
+| Event          | `events.customerCreated`              | `(customer)`                                                                                                                |
+| Event          | `events.customerUpdated`              | `(customer, previous)`                                                                                                      |
+| Event          | `events.customerDeleted`              | `(customerId)` only                                                                                                         |
+| Server context | `ctx.getCustomer(id)`                 | `Customer \| null`                                                                                                          |
+| Server context | `ctx.findCustomers(query)`            | `CustomerPage`                                                                                                              |
+| UI mount       | `PluginUIMountPoint.CUSTOMER_PANEL`   | Panel beside the customer on the cart                                                                                       |
+| UI mount       | `PluginUIMountPoint.DASHBOARD_WIDGET` | Card on the dashboard for users who can read it                                                                             |
+| Client context | `context.customer`                    | The customer attached to the current cart, if any                                                                           |
 
 The host rejects `getCustomer` and `findCustomers` calls from plugins without
 the `CUSTOMER` permission.
 
 ```ts
-hooks.beforeCustomerSave // handler returns { ok: true, value } or { ok: false, reason }
+hooks.beforeCustomerSave; // handler returns { ok: true, value } or { ok: false, reason }
 ```
 
 Don't log or persist customer fields beyond what the plugin needs; store the
@@ -98,6 +98,85 @@ The host guarantees that:
 - `resolveAccess` returning `deny`, or throwing, blocks the login.
 - Handlers receive the caller as `ctx.principal`. It is `null` only when the
   host has no resolved caller; treat that as unauthenticated.
+
+## Payment processors
+
+A plugin can take payment online (PayPal, Adyen, a regional processor).
+Declare the `PAYMENT` permission and register a `PaymentProcessor` from the
+server entry:
+
+```ts
+plugin.register("paymentProcessor", {
+    id: "acme-pay", // the plugin's name, or "<plugin name>-<suffix>"
+    label: "Acme Pay",
+    capabilities: { checkout: true, invoice: false },
+    async createCheckout({ order, successUrl, cancelUrl }) {
+        const session = await acme.createSession(/* ... */);
+        return { externalId: session.id, url: session.hostedUrl };
+    },
+    async handleWebhook({ headers, rawBody, url }) {
+        if (!acme.verify(rawBody, headers["acme-signature"])) {
+            throw new Error("bad signature");
+        }
+        const event = JSON.parse(rawBody.toString("utf8"));
+        return [
+            {
+                id: event.id,
+                type: "payment.updated",
+                kind: "checkout",
+                external_id: event.session,
+                status: "paid",
+            },
+        ];
+    },
+});
+```
+
+The host guarantees that:
+
+- Without the `PAYMENT` permission the plugin fails to load.
+- The id must be the plugin's name or start with `<plugin name>-`, and can
+  never be one the host ships (`square`). A second processor with the same id
+  is refused and the plugin fails to load.
+- The processor is removed again if its plugin is unloaded.
+- `POST /webhooks/<id>` hands the request to `handleWebhook` with the raw body
+  and the public URL, before any parsing. Throw for anything unsigned: the
+  host answers a bare 401 and never shows or logs the error to the caller.
+  Event ids must be stable across redeliveries; the host drops repeats.
+- Only the operations that `capabilities` lists are called. Whatever a
+  processor returns from `handleWebhook` is validated before it is used.
+- Card data never passes through the host. A processor sends the shopper to a
+  hosted page or invoice and reports the result by webhook.
+
+## Gateway traffic: principal, source and scopes
+
+Orders created through a gateway credential reach the same hooks and events as
+staff orders. Every hook handler gets `(input, ctx)` and every event listener
+gets `ctx` as its last argument, with `ctx.principal` (the caller, or `null`
+when nothing authenticated caused it, such as a processor webhook) and
+`ctx.source` (the credential's name for an online order, `null` at a till).
+
+```ts
+plugin.hook(hooks.beforeOrderCreate, (order, ctx) =>
+    ctx.source !== null && total(order) < MINIMUM
+        ? { ok: false, reason: "Online orders start at 10.00" }
+        : { ok: true, value: order },
+);
+```
+
+| Surface | Name                                                                                                                           | Notes                                                                                                                                                       |
+| ------- | ------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Hook    | `hooks.beforeInvoiceCreate`                                                                                                    | Input `InvoiceCreateRequest`; may change `dueDate`, `delivery`, `message` or block. Holds customer contact details: only called for plugins with `CUSTOMER` |
+| Event   | `events.invoiceCreated`, `invoiceSent`, `invoiceViewed`, `invoicePaid`, `invoiceOverdue`, `invoiceCanceled`, `invoiceRefunded` | `(invoice, order, ctx)`                                                                                                                                     |
+
+Plugin API handlers receive the caller as `ctx.principal`: a staff user, or a
+gateway credential when the route is exposed through the gateway. A handler
+that throws gets a generic 500; its message is never returned.
+
+A plugin that exposes gateway routes lists the scopes they use in
+`tessellate.gatewayScopes`, each `plugin:<plugin name>:<verb>`. A route may use
+only scopes listed there, and a plugin can never declare or use a core scope.
+Owners grant these scopes to credentials like any other.
 
 ## Hosting plugins
 
