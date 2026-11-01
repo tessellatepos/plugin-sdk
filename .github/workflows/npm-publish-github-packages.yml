@@ -15,7 +15,7 @@ jobs:
             - uses: pnpm/setup@v2
               with:
                   version: 11.24.0
-                  runtime: node@25.9
+                  runtime: node@26
                   require-lockfile: true
                   install: false
                   cache: true
@@ -42,7 +42,7 @@ jobs:
                   name: package
             - uses: actions/setup-node@v4
               with:
-                  node-version: 24
+                  node-version: 26
             # Trusted publishing needs npm 11.5.1 or newer.
             - run: npm install -g npm@latest
             # No token: npm exchanges the workflow's OIDC identity for a
@@ -62,7 +62,7 @@ jobs:
                   name: package
             - uses: actions/setup-node@v4
               with:
-                  node-version: 24
+                  node-version: 26
             - env:
                   NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
               run: |

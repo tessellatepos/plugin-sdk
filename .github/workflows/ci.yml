@@ -15,7 +15,7 @@ jobs:
             - uses: pnpm/setup@v2
               with:
                   version: 11.24.0
-                  runtime: node@25.9
+                  runtime: node@26
                   require-lockfile: true
                   install: false
                   cache: true
