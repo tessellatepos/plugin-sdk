@@ -1,0 +1,27 @@
+name: CI
+
+on:
+    pull_request:
+    push:
+        branches: [main]
+
+jobs:
+    check:
+        runs-on: ubuntu-latest
+        env:
+            HUSKY: 0
+            # The install above already ran; skip pnpm's repeat check, which would re-apply the age policy.
+            pnpm_config_verify_deps_before_run: false
+        steps:
+            - uses: actions/checkout@v7
+            - uses: pnpm/setup@v2
+              with:
+                  version: 11.24.0
+                  runtime: node@26
+                  require-lockfile: true
+                  install: false
+                  cache: true
+            - run: pnpm install --frozen-lockfile --ignore-scripts --config.minimumReleaseAgeExclude=@tessellatepos/sdk@0.0.2-alpha
+            - run: pnpm lint
+            - run: pnpm typecheck
+            - run: pnpm run build

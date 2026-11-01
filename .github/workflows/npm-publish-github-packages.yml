@@ -1,4 +1,4 @@
-name: Build and Publish Plugin SDK to GitHub Packages
+name: Publish Plugin SDK
 
 on:
     release:
@@ -6,27 +6,67 @@ on:
     workflow_dispatch:
 
 jobs:
-    publish-gpr:
+    build:
         runs-on: ubuntu-latest
-        permissions:
-            contents: read
-            packages: write
         env:
             HUSKY: 0
+            # The install above already ran; skip pnpm's repeat check, which would re-apply the age policy.
+            pnpm_config_verify_deps_before_run: false
         steps:
             - uses: actions/checkout@v7
             - uses: pnpm/setup@v2
               with:
                   version: 11.24.0
-                  runtime: node@25.9
+                  runtime: node@26
                   require-lockfile: true
                   install: false
                   cache: true
-            - run: pnpm install --frozen-lockfile
+            - run: pnpm install --frozen-lockfile --ignore-scripts --config.minimumReleaseAgeExclude=@tessellatepos/sdk@0.0.2-alpha
+            - run: pnpm lint
+            - run: pnpm typecheck
             - run: pnpm run build
-            - run: |
-                  echo "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}" > .npmrc
-                  echo "@tessellatepos:registry=https://npm.pkg.github.com/" >> .npmrc
-            - run: pnpm publish --no-git-checks
-              env:
-                  NODE_AUTH_TOKEN: ${{secrets.GITHUB_TOKEN}}
+            - run: pnpm pack --pack-destination dist-pack
+            - uses: actions/upload-artifact@v7
+              with:
+                  name: package
+                  path: dist-pack/*.tgz
+
+    # Same tarball goes to both registries, so they can never drift apart.
+    publish-npm:
+        needs: build
+        runs-on: ubuntu-latest
+        permissions:
+            contents: read
+            id-token: write
+        steps:
+            - uses: actions/download-artifact@v8
+              with:
+                  name: package
+            - uses: actions/setup-node@v7
+              with:
+                  node-version: 26
+            # Trusted publishing needs npm 11.5.1 or newer.
+            - run: npm install -g npm@latest
+            # No token: npm exchanges the workflow's OIDC identity for a
+            # short-lived credential (configured on npmjs.com). The trusted publisher
+            # can only stage; approve the staged version afterwards with 2FA.
+            - run: npm stage publish ./*.tgz --registry https://registry.npmjs.org/ --access public --tag latest
+
+    publish-gpr:
+        needs: build
+        runs-on: ubuntu-latest
+        permissions:
+            contents: read
+            packages: write
+        steps:
+            - uses: actions/download-artifact@v8
+              with:
+                  name: package
+            - uses: actions/setup-node@v7
+              with:
+                  node-version: 26
+            - env:
+                  NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              run: |
+                  echo "//npm.pkg.github.com/:_authToken=${NODE_AUTH_TOKEN}" > ~/.npmrc
+                  npm publish ./*.tgz --registry https://npm.pkg.github.com/ --access public --tag latest
