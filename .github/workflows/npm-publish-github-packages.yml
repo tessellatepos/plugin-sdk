@@ -19,7 +19,7 @@ jobs:
                   require-lockfile: true
                   install: false
                   cache: true
-            - run: pnpm install --frozen-lockfile --ignore-scripts
+            - run: pnpm install --frozen-lockfile --ignore-scripts --config.minimumReleaseAgeExclude=@tessellatepos/sdk@0.0.2-alpha
             - run: pnpm lint
             - run: pnpm typecheck
             - run: pnpm run build
