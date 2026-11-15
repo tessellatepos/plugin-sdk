@@ -22,6 +22,7 @@ call.
 | ------------------------------------------------ | -------------------------------------------------------------------------------------------------------------- |
 | `AUTH`                                           | `plugin.register("auth", provider)`: sign-in methods. Roles it may grant are listed in `tessellate.authRoles`  |
 | `CUSTOMER`                                       | `ctx.getCustomer`, `ctx.findCustomers`, the customer hook and events, and `beforeInvoiceCreate` (all hold PII) |
+| `MEMBER_AUTH`                                    | `plugin.register("memberAuth", provider)`, `access: "member"` routes, `ctx.members` and the member events      |
 | `PAYMENT`                                        | `plugin.register("paymentProcessor", processor)`                                                               |
 | `CART`, `CATALOG`, `CHECKOUT`, `DEVICE`, `ORDER` | The existing cart, catalog, checkout, device and order surfaces                                                |
 
@@ -38,10 +39,10 @@ Hooks run before an action and may change its input or block it; events run
 after and are fire-and-forget. Both receive a context as their last argument
 (see [Gateway](#gateway-principal-source-scopes-and-operations)).
 
-| Kind   | Names                                                                                                                                                                                                                                  |
-| ------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Hooks  | `beforeOrderCreate`, `beforeCheckout`, `beforePayment`, `beforeCustomerSave`, `beforeInvoiceCreate`                                                                                                                                    |
-| Events | `orderCreated`, `paymentCompleted`, `orderCancelled`, `invoiceCreated`, `invoiceSent`, `invoiceViewed`, `invoicePaid`, `invoiceOverdue`, `invoiceCanceled`, `invoiceRefunded`, `customerCreated`, `customerUpdated`, `customerDeleted` |
+| Kind   | Names                                                                                                                                                                                                                                                                                     |
+| ------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Hooks  | `beforeOrderCreate`, `beforeCheckout`, `beforePayment`, `beforeCustomerSave`, `beforeInvoiceCreate`                                                                                                                                                                                       |
+| Events | `orderCreated`, `paymentCompleted`, `orderCancelled`, `invoiceCreated`, `invoiceSent`, `invoiceViewed`, `invoicePaid`, `invoiceOverdue`, `invoiceCanceled`, `invoiceRefunded`, `customerCreated`, `customerUpdated`, `customerDeleted`, `memberCreated`, `memberUpdated`, `memberDeleted` |
 
 Server context (`ctx` in API handlers): `ctx.principal` (the caller, `null`
 only when unresolved: treat as unauthenticated), `ctx.db`, `ctx.session`,
@@ -134,6 +135,70 @@ The host guarantees that:
 - `resolveAccess` returning `deny`, or throwing, blocks the login.
 - Handlers receive the caller as `ctx.principal`. It is `null` only when the
   host has no resolved caller; treat that as unauthenticated.
+
+## Member logins
+
+Members are people who sign in through a plugin but are not staff: a club
+member, a ticket buyer. They never get a staff session, so they cannot reach
+the till or Settings. The host runs the sign-in, keeps the member record and
+shows every member under Settings -> Members. The plugin picks its own UI;
+the host provides the API only.
+
+Declare the `MEMBER_AUTH` permission and register a provider:
+
+```ts
+import { defineMemberAuth } from "@tessellatepos/plugin-sdk/server";
+
+plugin.register(
+    "memberAuth",
+    defineMemberAuth({
+        id: "discord",
+        label: "Sign in with Discord",
+        signup: "approval", // or "open"; the owner may override it
+        oauth: {
+            authorizationUrl: "https://discord.com/oauth2/authorize",
+            tokenUrl: "https://discord.com/api/oauth2/token",
+            userInfoUrl: "https://discord.com/api/users/@me",
+            clientId: "",
+            clientSecret: "",
+            scopes: ["identify", "email"],
+        },
+        resolveMember: (profile) =>
+            profile.email ? { display_name: profile.name } : { deny: true },
+    }),
+);
+```
+
+Routes that need a signed-in member set `access: "member"` on the API mount.
+They are served under `/member/<plugin>/...`, never take staff credentials,
+and a member of one plugin cannot call another plugin's routes. Member routes
+need the permission, cannot use the gateway, and cannot start with `/auth`.
+
+The host serves these under `/member/<plugin>/auth/`:
+
+| Route                      | Purpose                                             |
+| -------------------------- | --------------------------------------------------- |
+| `GET providers`            | Enabled logins, for the plugin's own sign-in screen |
+| `GET <id>/start?returnTo=` | Begins OAuth2 with PKCE; `returnTo` must be local   |
+| `GET <id>/callback`        | Register this URL with the identity provider        |
+| `GET me`, `POST logout`    | The current member; end the session                 |
+
+The host guarantees that:
+
+- A login is inactive until the owner enables it and enters the client ID and
+  secret in Settings -> Members. The secret is stored encrypted and never
+  returned.
+- Signup defaults to `approval`. New members wait as `pending` until staff
+  approve them, unless the owner or plugin chose `open`.
+- `resolveMember` returning `deny`, or throwing, blocks the sign-in.
+- Disabling or deleting a member ends their sessions at once.
+- Sessions last 30 days, are stored hashed, and use the
+  `tessellate_member` cookie scoped to `/member/<plugin>`.
+- `ctx.members.get(id)` and `ctx.members.find(query)` only see the plugin's
+  own members. Member events go only to the plugin that owns the member.
+
+When the plugin's UI is on another origin, the owner lists it in the
+`MEMBER_ORIGINS` environment variable so credentialed requests are allowed.
 
 ## Payment processors
 
