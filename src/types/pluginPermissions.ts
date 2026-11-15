@@ -7,6 +7,8 @@ export enum PluginPermission {
     /** Read customers and receive customer hooks/events (contains PII). */
     CUSTOMER = "CUSTOMER",
     DEVICE = "DEVICE",
+    /** Contribute a member login via `plugin.register("memberAuth", ...)` and read the plugin's members. */
+    MEMBER_AUTH = "MEMBER_AUTH",
     ORDER = "ORDER",
     /** Contribute a payment processor via `plugin.register("paymentProcessor", ...)`. */
     PAYMENT = "PAYMENT",
@@ -19,6 +21,7 @@ export interface PluginPermissionProvider {
     checkout: boolean;
     customer: boolean;
     device: boolean;
+    memberAuth: boolean;
     order: boolean;
     payment: boolean;
 }

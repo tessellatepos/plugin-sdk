@@ -3,6 +3,7 @@ import type {
     Money,
     TenderType,
     Customer,
+    Member,
     CustomerInput,
     OnlinePayment,
     Principal,
@@ -107,6 +108,20 @@ export const events = {
         ),
     customerDeleted:
         defineEvent<(customerId: string) => void>("customerDeleted"),
+    /**
+     * A member of this plugin joined (status "active" or "pending"). Only the
+     * plugin that owns the member is called.
+     */
+    memberCreated: defineEvent<(member: Member) => void>("memberCreated"),
+    /** A member's status changed, e.g. approved or disabled. */
+    memberUpdated:
+        defineEvent<(member: Member, previous: Member) => void>(
+            "memberUpdated",
+        ),
+    /**
+     * A member was deleted. The plugin should delete its own data about them.
+     */
+    memberDeleted: defineEvent<(memberId: string) => void>("memberDeleted"),
 };
 
 function defineInvoiceEvent(name: string) {

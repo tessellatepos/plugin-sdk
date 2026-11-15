@@ -2,6 +2,13 @@ export type { PluginServerContext } from "@/server/host/context.ts";
 export type { PluginTableHooks } from "@/server/host/tableHooks.ts";
 export type { ServerPlugin } from "@/server/host/plugin.ts";
 
+export { defineMemberAuth } from "@/server/host/member.ts";
+export type {
+    MemberAuthProvider,
+    MemberDecision,
+    MemberProfile,
+} from "@/server/host/member.ts";
+
 export { defineAuthProvider } from "@/server/host/auth.ts";
 export type {
     AccessDecision,

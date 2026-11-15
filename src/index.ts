@@ -10,6 +10,7 @@ export { FrontendPlugin } from "@/client/frontendPlugin.ts";
 export { createPluginApiClient } from "@/client/pluginApiClient.ts";
 
 export type {
+    PluginApiAccess,
     PluginApiMountDefinition,
     PluginApiRequest,
     PluginApiResponse,
