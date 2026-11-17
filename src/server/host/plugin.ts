@@ -3,6 +3,7 @@ import type { AuthProvider } from "@/server/host/auth.ts";
 import type { PluginDatabaseMount } from "@/types/pluginDatabaseMounts.ts";
 import type { PaymentProcessor } from "@/server/host/processor.ts";
 import type { PluginManifest } from "@/types/pluginManifest.ts";
+import type { PluginTableHooks } from "@/server/host/tableHooks.ts";
 import type {
     EventDefinition,
     HookContext,
@@ -29,6 +30,12 @@ export interface ServerPlugin {
      * the host ships (such as "square").
      */
     register(kind: "paymentProcessor", processor: PaymentProcessor): void;
+
+    /**
+     * Intercepts writes (insert, update, delete) to one of this plugin's
+     * tables, before and/or after. Can be called more than once per table.
+     */
+    onTable(table: string, hooks: PluginTableHooks): void;
 
     /** Runs before an action; can modify the input or block the action. */
     hook<TInput, TOutput>(

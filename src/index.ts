@@ -28,9 +28,14 @@ export type {
     PluginDatabaseMount,
     PluginDatabaseRepository,
     PluginDatabaseTable,
+    PluginMigrationOp,
     PluginTableClient,
+    PluginTableMigration,
 } from "@/types/pluginDatabaseMounts.ts";
-export { PluginColumnType } from "@/types/pluginDatabaseMounts.ts";
+export {
+    PluginColumnType,
+    PluginTableHookError,
+} from "@/types/pluginDatabaseMounts.ts";
 
 export type {
     PluginManifest,
