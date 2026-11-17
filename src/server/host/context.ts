@@ -6,6 +6,9 @@ import type {
     CustomerQuery,
     CustomerPage,
     Principal,
+    Member,
+    MemberPage,
+    MemberQuery,
 } from "@tessellatepos/sdk";
 
 export interface PluginServerContext {
@@ -28,4 +31,13 @@ export interface PluginServerContext {
      * promise with a clear error otherwise.
      */
     findCustomers(query: CustomerQuery): Promise<CustomerPage>;
+    /**
+     * This plugin's members. Requires the MEMBER_AUTH permission; the host
+     * rejects the promise with a clear error otherwise. A plugin sees only
+     * members its own login created.
+     */
+    members: {
+        get(memberId: string): Promise<Member | null>;
+        find(query: Omit<MemberQuery, "plugin">): Promise<MemberPage>;
+    };
 }

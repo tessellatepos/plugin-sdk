@@ -1,6 +1,7 @@
 import type { PluginApiMountDefinition } from "@/types/pluginApiMounts.ts";
 import type { AuthProvider } from "@/server/host/auth.ts";
 import type { PluginDatabaseMount } from "@/types/pluginDatabaseMounts.ts";
+import type { MemberAuthProvider } from "@/server/host/member.ts";
 import type { PaymentProcessor } from "@/server/host/processor.ts";
 import type { PluginManifest } from "@/types/pluginManifest.ts";
 import type { PluginTableHooks } from "@/server/host/tableHooks.ts";
@@ -24,6 +25,8 @@ export interface ServerPlugin {
     register(kind: "database", mount: PluginDatabaseMount): void;
     /** Adds a sign-in method. Needs the AUTH permission. */
     register(kind: "auth", provider: AuthProvider): void;
+    /** Adds a login for the plugin's own members. Needs the MEMBER_AUTH permission. */
+    register(kind: "memberAuth", provider: MemberAuthProvider): void;
     /**
      * Adds a payment processor. Needs the PAYMENT permission. Its id must be
      * the plugin's name or start with "<plugin name>-", and may not be one
