@@ -1,4 +1,5 @@
 export type { PluginServerContext } from "@/server/host/context.ts";
+export type { PluginTableHooks } from "@/server/host/tableHooks.ts";
 export type { ServerPlugin } from "@/server/host/plugin.ts";
 
 export { defineAuthProvider } from "@/server/host/auth.ts";
