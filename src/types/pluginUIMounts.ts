@@ -9,6 +9,12 @@ export interface PluginUIMountDefinition {
      * Falls back to the plugin name.
      */
     label?: string;
+    /**
+     * PAGE mounts only: the sub-path under /plugins/<pluginName>/ this page
+     * is served at (e.g. "ledger" → /plugins/<name>/ledger). Omit for the
+     * plugin's index page at /plugins/<name>.
+     */
+    path?: string;
 }
 
 export enum PluginUIMountPoint {
